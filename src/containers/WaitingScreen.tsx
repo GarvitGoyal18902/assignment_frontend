@@ -1,0 +1,45 @@
+export default function WaitingScreen() {
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex flex-col items-center justify-center p-8 font-sans">
+            <div className="text-center max-w-md">
+                <div className="flex items-center justify-center mb-12">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full mr-3"></div>
+                    <div className="w-3 h-3 bg-purple-500 rounded-full mr-3 animate-ping"></div>
+                    <div className="w-3 h-3 bg-purple-500 rounded-full mr-3 animate-pulse"></div>
+                </div>
+
+                <div className="relative mb-12">
+                    <div className="w-32 h-32 md:w-40 md:h-40 bg-gradient-to-r from-purple-400 to-purple-600 rounded-full shadow-2xl flex items-center justify-center mx-auto border-8 border-white/50 animate-pulse">
+                        <div className="text-4xl md:text-6xl font-bold text-white drop-shadow-lg">C</div>
+                    </div>
+                    <div className="absolute -inset-2 bg-gradient-to-r from-purple-400/30 to-purple-600/30 rounded-full blur-xl animate-ping"></div>
+                </div>
+
+                <div className="space-y-4">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
+                        Wait for the teacher
+                        <br />
+                        <span className="text-purple-600">to ask questions...</span>
+                    </h1>
+
+                    <div className="flex items-center justify-center space-x-2">
+                        <div
+                            className="w-3 h-3 bg-purple-400 rounded-full animate-bounce"
+                            style={{ animationDelay: '0s' }}
+                        />
+                        <div
+                            className="w-3 h-3 bg-purple-500 rounded-full animate-bounce"
+                            style={{ animationDelay: '0.1s' }}
+                        />
+                        <div
+                            className="w-3 h-3 bg-purple-600 rounded-full animate-bounce"
+                            style={{ animationDelay: '0.2s' }}
+                        />
+                    </div>
+                </div>
+
+                <div className="absolute bottom-8 right-8 w-4 h-4 bg-purple-500 rounded-full animate-ping shadow-lg"></div>
+            </div>
+        </div>
+    );
+}
