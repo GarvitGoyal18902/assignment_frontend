@@ -1,1 +1,137 @@
 @import 'tailwindcss';
+.chat-widget {
+    width: 100%;
+    max-width: 420px;
+    height: 600px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+}
+
+.chat-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.chat-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.chat-subtitle {
+    margin-top: 4px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.message-wrapper {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.empty-chat {
+    margin: auto;
+    color: #9ca3af;
+    font-size: 14px;
+    text-align: center;
+}
+
+.message-row {
+    display: flex;
+    width: 100%;
+}
+
+.message-row-left {
+    justify-content: flex-start;
+}
+
+.message-row-right {
+    justify-content: flex-end;
+}
+
+.message-bubble {
+    max-width: 75%;
+    padding: 10px 12px;
+    border-radius: 16px;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+.message-bubble-me {
+    background: #2563eb;
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.message-bubble-other {
+    background: white;
+    color: #111827;
+    border: 1px solid #e5e7eb;
+    border-bottom-left-radius: 4px;
+}
+
+.message-sender {
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0.9;
+    margin-bottom: 4px;
+}
+
+.message-text {
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.message-time {
+    margin-top: 6px;
+    font-size: 11px;
+    opacity: 0.75;
+    text-align: right;
+}
+
+.message-input-bar {
+    display: flex;
+    gap: 10px;
+    padding: 14px;
+    border-top: 1px solid #e5e7eb;
+    background: white;
+}
+
+.message-input {
+    flex: 1;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    padding: 10px 14px;
+    outline: none;
+    font-size: 14px;
+}
+
+.message-input:focus {
+    border-color: #2563eb;
+}
+
+.send-button {
+    border: none;
+    border-radius: 999px;
+    padding: 10px 18px;
+    background: #2563eb;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.send-button:disabled {
+    background: #93c5fd;
+    cursor: not-allowed;
+}

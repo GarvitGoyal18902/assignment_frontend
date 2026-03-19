@@ -1,12 +1,16 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function StudentPoll() {
+    let navigate = useNavigate();
     const [studentName, setStudentName] = useState('');
 
     const handleContinue = () => {
         if (studentName.trim()) {
             // Navigate to poll/question screen
             // eslint-disable-next-line no-console
+            localStorage.setItem('studentName', studentName);
+            navigate(`/waiting`)
             console.log('Continue with student:', studentName);
         }
     };

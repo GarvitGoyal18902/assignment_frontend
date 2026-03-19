@@ -1,4 +1,55 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
+import { io, type Socket } from 'socket.io-client';
+import axios from 'axios';
+import { useNavigate } from 'react-router';
+
+
+
+
 export default function WaitingScreen() {
+
+console.log("waiting#######")
+const socketRef = useRef<Socket | null>(null);
+    const navigate = useNavigate();
+    const roomId = localStorage.getItem('roomId');
+
+    useEffect(() => {
+        const socket = io('http://localhost:5001');
+        socketRef.current = socket;
+        console.log("student socket connected...........")
+
+    // socket.emit('student:join', { pollId });
+        socket.emit('connectToRoom', roomId);
+        
+    socket.on('poll:started', () => {
+        console.log("navigating to StudentPoll............")
+        navigate('/student/poll');
+    });
+    socket.on('poll:tick', () => {
+        console.log("navigating to StudentPoll............")
+        navigate('/student/poll');
+    });
+    socket.on('poll:state', () => {
+        console.log("navigating to StudentPoll............")
+        navigate('/student/poll');
+    });
+    // socket.on('poll:started', () => {
+    //     console.log("navigating to StudentPoll............")
+    //     navigate('/student/poll');
+    // });
+    // socket.on('poll:started', () => {
+    //     console.log("navigating to StudentPoll............")
+    //     navigate('/student/poll');
+    // });
+
+        return () => {
+        console.log('student socket disconnected #####')
+        socket.disconnect();
+        socketRef.current = null;
+    };
+},[]);
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex flex-col items-center justify-center p-8 font-sans">
             <div className="text-center max-w-md">
