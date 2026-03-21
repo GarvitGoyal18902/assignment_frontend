@@ -1,19 +1,38 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { io, type Socket } from 'socket.io-client';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
 
 export default function StudentPoll() {
     let navigate = useNavigate();
     const [studentName, setStudentName] = useState('');
-
+    const socketRef = useRef<Socket | null>(null);
+    let roomId = 'room'
+    
+    useEffect(() => {
+        const socket = io('http://localhost:5001');
+        socketRef.current = socket;
+        
+        socket.emit('connectToRoom', 'room');
+        
+        return() => {
+            socket.disconnect();
+            socketRef.current = null;
+        }
+    }, []);
+    
     const handleContinue = () => {
         if (studentName.trim()) {
-            // Navigate to poll/question screen
-            // eslint-disable-next-line no-console
             localStorage.setItem('studentName', studentName);
-            navigate(`/waiting`)
-            console.log('Continue with student:', studentName);
+            localStorage.setItem('roomId', 'room');
+                console.log('Continue with student:', studentName);
+                socketRef.current?.emit('student:come', { studentName, roomId });
+                navigate(`/waiting`);
+                
         }
     };
+
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center p-8 font-sans">

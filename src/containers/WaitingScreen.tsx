@@ -3,16 +3,34 @@ import { useLocation, useParams } from 'react-router-dom';
 import { io, type Socket } from 'socket.io-client';
 import axios from 'axios';
 import { useNavigate } from 'react-router';
-
+import ChatWidget from "../components/ChatWidget/ChatWidget";
+import { Message } from "../types/chat";
 
 
 
 export default function WaitingScreen() {
 
-console.log("waiting#######")
-const socketRef = useRef<Socket | null>(null);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const socketRef = useRef<Socket | null>(null);
     const navigate = useNavigate();
     const roomId = localStorage.getItem('roomId');
+    let navigated = false;
+
+    useEffect(() => {
+      const fetchChats = async () => {
+          try {
+          const res = await axios.post('http://localhost:5001/api/chats', {
+              roomId
+          });
+
+          setMessages(res.data.chats); 
+          } catch (err) {
+          console.error('Failed to fetch chats', err);
+          }
+      };
+
+    fetchChats();
+    }, []);
 
     useEffect(() => {
         const socket = io('http://localhost:5001');
@@ -22,34 +40,60 @@ const socketRef = useRef<Socket | null>(null);
     // socket.emit('student:join', { pollId });
         socket.emit('connectToRoom', roomId);
         
-    socket.on('poll:started', () => {
-        console.log("navigating to StudentPoll............")
-        navigate('/student/poll');
-    });
+    // socket.on('poll:started', () => {
+    //     console.log("navigating to StudentPoll............")
+    //     if(!navigated){
+    //         navigate('/student/poll');
+    //         navigated = true;
+    //     }
+    // });
     socket.on('poll:tick', () => {
         console.log("navigating to StudentPoll............")
-        navigate('/student/poll');
+        if(!navigated){
+            navigated = true;
+            navigate('/student/poll');
+        }
     });
-    socket.on('poll:state', () => {
-        console.log("navigating to StudentPoll............")
-        navigate('/student/poll');
-    });
-    // socket.on('poll:started', () => {
-    //     console.log("navigating to StudentPoll............")
-    //     navigate('/student/poll');
-    // });
-    // socket.on('poll:started', () => {
-    //     console.log("navigating to StudentPoll............")
-    //     navigate('/student/poll');
-    // });
 
-        return () => {
-        console.log('student socket disconnected #####')
-        socket.disconnect();
-        socketRef.current = null;
+    socket.on('chat:updateChat', ({roomId,sender,text,createdAt}) => {
+        setMessages((prev) => [...prev, { sender, message: text, createdAt: createdAt }]);
+    });
+
+    return () => {
+    console.log('student socket disconnected #####')
+    socket.disconnect();
+    socketRef.current = null;
     };
-},[]);
+    }, []);
+    
+     const person = localStorage.getItem('studentName')
+    console.log('name got from localstorage ',person)
+      let currentPerson='teacher'
+    if (person) {
+          currentPerson = person;
+    }
+  
+  
+  const handleSendMessage = (text: string) => {
+    if (!socketRef.current) return;
 
+    const sender = localStorage.getItem('studentName') || 'Anonymous';
+    const createdAt = new Date().toISOString();
+
+    const message = {
+        roomId,
+        sender,
+        text,
+        createdAt
+    };
+
+    // Emit to backend
+    socketRef.current.emit('chat:newMessage', message);
+
+    // Update local messages
+    setMessages((prev) => [...prev, { sender, message: text, createdAt }]);
+    };
+    
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex flex-col items-center justify-center p-8 font-sans">
             <div className="text-center max-w-md">
@@ -91,6 +135,11 @@ const socketRef = useRef<Socket | null>(null);
 
                 <div className="absolute bottom-8 right-8 w-4 h-4 bg-purple-500 rounded-full animate-ping shadow-lg"></div>
             </div>
+             <ChatWidget
+            messages={messages}
+            currentUser={currentPerson}
+            onSendMessage={handleSendMessage}
+            />
         </div>
     );
 }

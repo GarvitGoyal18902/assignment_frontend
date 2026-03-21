@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from "socket.io-client";
 import { useNavigate } from 'react-router';
-
+import axios from 'axios';
+import ChatWidget from "../components/ChatWidget/ChatWidget";
+import { Message } from "../types/chat";
 
 type LiveResult = {
   option: string;
@@ -12,6 +14,8 @@ type LiveResult = {
 export default function StudentPollScreen() {
   const socketRef = useRef<Socket | null>(null);
   const currentPollIdRef = useRef<string>('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  
 
   const [timeLeft, setTimeLeft] = useState(600);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -23,118 +27,182 @@ export default function StudentPollScreen() {
 
   const [question, setQuestion] = useState('');
   const [pollId, setPollId] = useState<string>('');
+  const person = localStorage.getItem('studentName')
+  let currentPerson='teacher'
+  if (person) {
+    currentPerson = person;
+}
+  
 
-  const roomId = 'room';
-    let navigate = useNavigate()
-    const studentName=localStorage.getItem('studentName')
+  const roomId = localStorage.getItem('roomId');
+  let navigate = useNavigate()
+  const studentName=localStorage.getItem('studentName')
 
+    useEffect(() => {
+      const fetchChats = async () => {
+          try {
+          const res = await axios.post('http://localhost:5001/api/chats', {
+              roomId
+          });
+
+          setMessages(res.data.chats); 
+          } catch (err) {
+          console.error('Failed to fetch chats', err);
+          }
+      };
+
+    fetchChats();
+    }, []);
+
+  
+  
   useEffect(() => {     
-    const socket = io("http://localhost:5001");
+      const socket = io("http://localhost:5001");
       socketRef.current = socket;
       socket.emit('connectToRoom', roomId);
-    socket.emit('student:whatsgoingon', {studentName,roomId});
-    socket.on('poll:state', ({role, poll, remaining ,attempted,choosen}: any) => {
-      if (!poll) return;
+      socket.emit('student:whatsgoingon', {studentName,roomId});
+      socket.on('poll:state', ({role, poll, remaining ,attempted,choosen}: any) => {
+        if (!poll) return;
 
-      if (!attempted) {
-        currentPollIdRef.current = poll._id;
-            setSubmitted(false);
-            setShowResults(false);
-            setSelectedAnswer(null);
-        }
-        else {
-          setSubmitted(true);
+        if (!attempted) {
+          currentPollIdRef.current = poll._id;
+              setSubmitted(false);
+              setShowResults(false);
+              setSelectedAnswer(null);
+          }
+          else {
+            setSubmitted(true);
+            setShowResults(true);
+            setSelectedAnswer(choosen); 
+          }
+        setPollId(poll._id);
+        setQuestion(poll.question || '');
+        setOptions(poll.options || []);
+        const totalVotes = (poll.options || []).reduce(
+          (sum: number, opt: any) => sum + (opt.voteCount ?? 0),
+          0
+        );
+        setLiveResults(
+          (poll.options || []).map((opt: any) => {
+            const count = opt.voteCount ?? 0;
+            const percent = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+            return {
+              option: opt.text,
+              votes: percent,
+              color: count > 0 ? 'bg-purple-500' : 'bg-gray-400'
+            } as LiveResult;
+          })
+        );
+        setTimeLeft(remaining ?? 0);
+        if (poll.isCompleted) {
           setShowResults(true);
-          setSelectedAnswer(choosen); 
         }
-      setPollId(poll._id);
-      setQuestion(poll.question || '');
-      setOptions(poll.options || []);
-      const totalVotes = (poll.options || []).reduce(
-        (sum: number, opt: any) => sum + (opt.voteCount ?? 0),
+      });
+        
+        
+      socket.on('poll:tick', ({ pollId, remaining }: { pollId: string; remaining: number }) => {
+          console.log('Poll:', pollId);
+          setTimeLeft(remaining ?? 0);
+      });
+
+      socket.on('poll:error', (err: any) => {
+        console.error('poll:error', err);
+      });
+
+      socket.on('connect', () => {
+        socket.emit('student:whatsgoingon', {studentName,roomId});
+      });
+        
+      socket.on('poll:voted', ({choosen}) => {
+                console.log("increasing ",choosen)
+          setOptions((prevOptions) => {
+            if (!prevOptions || choosen == null) return prevOptions;
+
+            const updatedOptions = prevOptions.map((opt, idx) => {
+              if (idx === choosen) {
+                return {
+                  ...opt,
+                  voteCount: (opt.voteCount ?? 0) + 1
+                };
+              }
+              return opt;
+      });
+
+      socket.on('chat:updateChat', ({roomId,sender,text,createdAt}) => {
+                  setMessages((prev) => [...prev, { sender, message: text, createdAt: createdAt }]);
+          });
+
+      // 2. Recalculate percentages
+      const totalVotes = updatedOptions.reduce(
+        (sum, opt) => sum + (opt.voteCount ?? 0),
         0
       );
-      setLiveResults(
-        (poll.options || []).map((opt: any) => {
-          const count = opt.voteCount ?? 0;
-          const percent = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-          return {
-            option: opt.text,
-            votes: percent,
-            color: count > 0 ? 'bg-purple-500' : 'bg-gray-400'
-          } as LiveResult;
-        })
-      );
-      setTimeLeft(remaining ?? 0);
-      if (poll.isCompleted) {
-        setShowResults(true);
-      }
-    });
-      
-      
-    socket.on('poll:tick', ({ pollId, remaining }: { pollId: string; remaining: number }) => {
-        console.log('Poll:', pollId);
-        setTimeLeft(remaining ?? 0);
-    });
 
-    socket.on('poll:error', (err: any) => {
-      console.error('poll:error', err);
-    });
+      const updatedResults = updatedOptions.map((opt) => {
+        const count = opt.voteCount ?? 0;
+        const percent =
+          totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
 
-    socket.on('connect', () => {
-      socket.emit('student:whatsgoingon', {studentName,roomId});
-    });
-      
-     socket.on('poll:voted', ({choosen}) => {
-        console.log("increasing ",choosen)
-  setOptions((prevOptions) => {
-    if (!prevOptions || choosen == null) return prevOptions;
-
-    // 1. Update vote count locally
-    const updatedOptions = prevOptions.map((opt, idx) => {
-      if (idx === choosen) {
         return {
-          ...opt,
-          voteCount: (opt.voteCount ?? 0) + 1
+          option: opt.text,
+          votes: percent,
+          color: count > 0 ? 'bg-purple-500' : 'bg-gray-400'
         };
-      }
-      return opt;
+      });
+
+      // 3. Update UI
+      setLiveResults(updatedResults);
+
+      return updatedOptions;
     });
+      });
+    
+     socket.on('chat:updateChat', ({roomId,sender,text,createdAt}) => {
+        setMessages((prev) => [...prev, { sender, message: text, createdAt: createdAt }]);
+      });
 
-    // 2. Recalculate percentages
-    const totalVotes = updatedOptions.reduce(
-      (sum, opt) => sum + (opt.voteCount ?? 0),
-      0
-    );
+socket.on('student:kickStudents', ({ studentName, roomId, status }) => {
+    console.log("oopss!!", studentName, currentPerson);
 
-    const updatedResults = updatedOptions.map((opt) => {
-      const count = opt.voteCount ?? 0;
-      const percent =
-        totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-
-      return {
-        option: opt.text,
-        votes: percent,
-        color: count > 0 ? 'bg-purple-500' : 'bg-gray-400'
-      };
-    });
-
-    // 3. Update UI
-    setLiveResults(updatedResults);
-
-    return updatedOptions;
-  });
+  if (studentName === currentPerson) {
+      console.log('kickenavigaitn')
+        navigate('/kicked');
+}
 });
-
+      
+     
+    
       socket.on('poll:ended', (pollId, poll) => {
         navigate('/waiting')
       });
 
-    return () => {
-      socket.disconnect();
-    };
+      return () => {
+        socket.disconnect();
+      };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+
+   
+  
+  
+    const handleSendMessage = (text: string) => {
+    if (!socketRef.current) return;
+
+    const sender = localStorage.getItem('studentName') || 'Anonymous';
+    const createdAt = new Date().toISOString();
+
+    const message = {
+        roomId,
+        sender,
+        text,
+        createdAt
+    };
+
+    socketRef.current.emit('chat:newMessage', message);
+    setMessages((prev) => [...prev, { sender, message: text, createdAt }]);
+};
+    
 
   const handleAnswerSelect = (optionText: string) => {
     if (!submitted) setSelectedAnswer(optionText);
@@ -173,12 +241,19 @@ export default function StudentPollScreen() {
                   <button className="px-4 py-2 bg-purple-500 text-white rounded-full text-sm font-bold">{ studentName}</button>
         </div>
 
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center bg-white rounded-full px-6 py-3 shadow mb-4">
-            <span className="text-lg font-bold mr-4">{question || 'Question'}</span>
-            <span className="text-2xl font-bold text-purple-600">{formatTime(timeLeft)}</span>
-          </div>
-        </div>
+     <div className="flex justify-between items-center bg-white rounded-full px-6 py-4 shadow mb-4">
+  {/* Question takes most of the space */}
+  <span className="text-lg font-bold flex-1">{question || 'Question'}</span>
+
+  {/* Timer as a separate button/badge */}
+  <div
+    className={`ml-4 px-4 py-2 rounded-full font-bold text-white ${
+      timeLeft <= 10 ? 'bg-red-500 animate-pulse' : 'bg-purple-500'
+    }`}
+  >
+    {formatTime(timeLeft)}
+  </div>
+</div>
 
         <div className="bg-white rounded-3xl shadow p-8 mb-8">
           {showResults ? (
@@ -226,6 +301,12 @@ export default function StudentPollScreen() {
           )}
         </div>
       </div>
+      <ChatWidget
+            messages={messages}
+            currentUser={currentPerson}
+            onSendMessage={handleSendMessage}
+            />
+            
     </div>
   );
 }
