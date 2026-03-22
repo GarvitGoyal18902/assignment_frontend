@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from "socket.io-client";
 import { useNavigate } from 'react-router';
 import axios from 'axios';
+import { API_BASE_URL } from '../constants/constants';
 import ChatWidget from "../components/ChatWidget/ChatWidget";
 import { Message } from "../types/chat";
 
@@ -41,7 +42,7 @@ export default function StudentPollScreen() {
     useEffect(() => {
       const fetchChats = async () => {
           try {
-          const res = await axios.post('http://localhost:5001/api/chats', {
+          const res = await axios.post(`${API_BASE_URL}/api/chats`, {
               roomId
           });
 
@@ -57,7 +58,7 @@ export default function StudentPollScreen() {
   
   
   useEffect(() => {     
-      const socket = io("http://localhost:5001");
+      const socket = io(`${API_BASE_URL}`);
       socketRef.current = socket;
       socket.emit('connectToRoom', roomId);
       socket.emit('student:whatsgoingon', {studentName,roomId});
@@ -161,13 +162,10 @@ export default function StudentPollScreen() {
         setMessages((prev) => [...prev, { sender, message: text, createdAt: createdAt }]);
       });
 
-socket.on('student:kickStudents', ({ studentName, roomId, status }) => {
-    console.log("oopss!!", studentName, currentPerson);
-
-  if (studentName === currentPerson) {
-      console.log('kickenavigaitn')
-        navigate('/kicked');
-}
+    socket.on('student:kickStudents', ({ studentName, roomId, status }) => {
+      if (studentName === currentPerson) {
+            navigate('/kicked');
+    }
 });
       
      
@@ -179,7 +177,6 @@ socket.on('student:kickStudents', ({ studentName, roomId, status }) => {
       return () => {
         socket.disconnect();
       };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 

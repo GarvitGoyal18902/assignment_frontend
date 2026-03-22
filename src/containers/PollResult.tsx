@@ -10,6 +10,8 @@ import type { Student } from '../types/student';
 
 import ChatWidget from "../components/ChatWidget/ChatWidget";
 import { Message } from "../types/chat";
+import { API_BASE_URL } from '../constants/constants';
+
 
 
 let roomId:string="room"
@@ -41,16 +43,13 @@ export default function PollResult() {
     const [remaining, setRemaining] = useState<number | null>(null);
     const [votes, setVotes] = useState<number[]>([]);
     const socketRef = useRef<Socket | null>(null);
-    const person = localStorage.getItem('studentName')
     let currentPerson='teacher'
-    if (person) {
-        currentPerson = person;
-    }
+    
 
     useEffect(() => {
     const fetchChats = async () => {
         try {
-        const res = await axios.post('http://localhost:5001/api/chats', {
+        const res = await axios.post(`${API_BASE_URL}/api/chats`, {
             roomId
         });
 
@@ -158,8 +157,8 @@ export default function PollResult() {
         });
 
         socket.on('chat:updateChat', ({roomId,sender,text,createdAt}) => {
-                // setMessages((prev) => [...prev, { sender, message: text, createdAt: createdAt }]);
-                console.log('update')
+                setMessages((prev) => [...prev, { sender, message: text, createdAt: createdAt }]);
+                // console.log('update')
         });
 
         socket.on('student:updateStudents', ({ studentName, roomId, status }) => {
@@ -208,7 +207,7 @@ export default function PollResult() {
 
     const handleSendMessage = (text: string) => {
         if (!socketRef.current) return;
-        const sender = localStorage.getItem('studentName') || 'Anonymous';
+        const sender ='teacher';
         const createdAt = new Date().toISOString();
         const message = {
             roomId,
@@ -220,6 +219,18 @@ export default function PollResult() {
         setMessages((prev) => [...prev, { sender, message: text, createdAt }]);
     };
     
+    const toggleStudent = (studentName: string, roomId: string) => {
+    setStudents((prev) =>
+        prev.map((s) =>
+            s.name === studentName && s.roomId === roomId
+                ? {
+                      ...s,
+                      status: s.status === "active" ? "kicked" : "active",
+                  }
+                : s
+        )
+    );
+};
     const handleKick = (roomId: string, studentName: string) => {
         socketRef.current?.emit('student:kicked',{studentName,roomId});
         toggleStudent(studentName, roomId);
@@ -239,18 +250,14 @@ export default function PollResult() {
         });
     };
 
-    const toggleStudent = (studentName: string, roomId: string) => {
-    setStudents((prev) =>
-        prev.map((s) =>
-            s.name === studentName && s.roomId === roomId
-                ? {
-                      ...s,
-                      status: s.status === "active" ? "kicked" : "active",
-                  }
-                : s
-        )
-    );
-};
+    const handleAllow = (roomId: string, studentName: string) => {
+        console.log('allowing student ', studentName,roomId);
+        socketRef.current?.emit('teacher:allowStudent', { studentName,roomId });
+
+        toggleStudent(studentName, roomId);
+
+    }
+
 
 
     return (
@@ -315,7 +322,7 @@ export default function PollResult() {
                     </button>
                 </div>
             </div>
-            <StudentWidget students={students} onKick={handleKick} />
+            <StudentWidget students={students} onKick={handleKick} onAllow={handleAllow } />
             <ChatWidget
             messages={messages}
             currentUser={currentPerson}
@@ -325,5 +332,6 @@ export default function PollResult() {
         </div>
         
     );
-}
+    }
+    
 

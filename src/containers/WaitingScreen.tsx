@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router';
 import ChatWidget from "../components/ChatWidget/ChatWidget";
 import { Message } from "../types/chat";
+import { API_BASE_URL } from '../constants/constants';
 
 
 
@@ -19,7 +20,7 @@ export default function WaitingScreen() {
     useEffect(() => {
       const fetchChats = async () => {
           try {
-          const res = await axios.post('http://localhost:5001/api/chats', {
+          const res = await axios.post(`${API_BASE_URL}/api/chats`, {
               roomId
           });
 
@@ -37,16 +38,8 @@ export default function WaitingScreen() {
         socketRef.current = socket;
         console.log("student socket connected...........")
 
-    // socket.emit('student:join', { pollId });
         socket.emit('connectToRoom', roomId);
         
-    // socket.on('poll:started', () => {
-    //     console.log("navigating to StudentPoll............")
-    //     if(!navigated){
-    //         navigate('/student/poll');
-    //         navigated = true;
-    //     }
-    // });
     socket.on('poll:tick', () => {
         console.log("navigating to StudentPoll............")
         if(!navigated){

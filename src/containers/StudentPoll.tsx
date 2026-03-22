@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { io, type Socket } from 'socket.io-client';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
+import { API_BASE_URL } from '../constants/constants';
 
 
 export default function StudentPoll() {
@@ -10,7 +12,7 @@ export default function StudentPoll() {
     let roomId = 'room'
     
     useEffect(() => {
-        const socket = io('http://localhost:5001');
+        const socket = io(`${API_BASE_URL}`);
         socketRef.current = socket;
         
         socket.emit('connectToRoom', 'room');
@@ -21,16 +23,26 @@ export default function StudentPoll() {
         }
     }, []);
     
-    const handleContinue = () => {
-        if (studentName.trim()) {
+   const handleContinue = async () => {
+    if (studentName.trim()) {
+        try {
+            const res = await axios.post(
+                `${API_BASE_URL}/api/students/checkallowed`,
+                { studentName, roomId }
+            );
+
             localStorage.setItem('studentName', studentName);
-            localStorage.setItem('roomId', 'room');
-                console.log('Continue with student:', studentName);
-                socketRef.current?.emit('student:come', { studentName, roomId });
-                navigate(`/waiting`);
-                
+            localStorage.setItem('roomId', roomId);
+            socketRef.current?.emit('student:come', { studentName, roomId });
+
+            navigate('/waiting');
+
+        } catch (err: any) {
+            console.log(err.response?.data);
+            navigate('/kicked')
         }
-    };
+    }
+};
 
 
 
