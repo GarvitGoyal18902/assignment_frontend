@@ -70,10 +70,8 @@ export default function QuestionManager() {
             setSubmitting(true);
             const response = await axios.post(`${API_BASE_URL}/api/polls`, payload);
             const { pollId } = response.data;
-
             navigate(`/poll/${pollId}`, { state: { poll: payload } });
         } catch (error) {
-            // eslint-disable-next-line no-console
             console.error('Failed to create poll', error);
         } finally {
             setSubmitting(false);

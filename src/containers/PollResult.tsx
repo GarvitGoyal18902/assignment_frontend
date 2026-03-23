@@ -162,9 +162,17 @@ export default function PollResult() {
         });
 
         socket.on('student:updateStudents', ({ studentName, roomId, status }) => {
-           console.log("updating");
-            addStudent(studentName, roomId,status);
-        });
+         setStudents((prev) => {
+            const exists = prev.some(s => s.name === studentName && s.roomId === roomId);
+
+            if (exists) {
+                return prev.filter(s => !(s.name === studentName && s.roomId === roomId));
+            } else {
+                addStudent(studentName, roomId, status);
+                return prev; 
+        }
+    });
+});
    
 
         return () => {

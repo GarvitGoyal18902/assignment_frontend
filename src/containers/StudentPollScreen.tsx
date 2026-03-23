@@ -230,12 +230,17 @@ export default function StudentPollScreen() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };  
 
+  const handleExit=()=>{
+    socketRef.current?.emit('student:go', { studentName });
+    navigate('/')
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 p-6 flex flex-col items-center">
       <div className="w-full max-w-lg">
         <div className="flex justify-between items-center mb-8">
           <div className="w-3 h-3 bg-purple-500 rounded-full animate-ping" />
-                  <button className="px-4 py-2 bg-purple-500 text-white rounded-full text-sm font-bold">{ studentName}</button>
+          <button onClick={handleExit }  className="px-4 py-2 bg-purple-500 text-white rounded-full text-sm font-bold">Exit pole </button>
         </div>
 
      <div className="flex justify-between items-center bg-white rounded-full px-6 py-4 shadow mb-4">
