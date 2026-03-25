@@ -18,12 +18,13 @@ export default function WaitingScreen() {
     let navigated = false;
 
     useEffect(() => {
+        const token = localStorage.getItem('token');
       const fetchChats = async () => {
           try {
           const res = await axios.post(`${API_BASE_URL}/api/chats`, {
               roomId
-          });
-
+          }, { headers: { authorization: `Bearer ${token}` } });
+              
           setMessages(res.data.chats); 
           } catch (err) {
           console.error('Failed to fetch chats', err);
@@ -34,10 +35,8 @@ export default function WaitingScreen() {
     }, []);
 
     useEffect(() => {
-        const socket = io('http://localhost:5001');
+        const socket = io(`${API_BASE_URL}`);
         socketRef.current = socket;
-        console.log("student socket connected...........")
-
         socket.emit('connectToRoom', roomId);
         
     socket.on('poll:tick', () => {

@@ -12,10 +12,6 @@ import ChatWidget from "../components/ChatWidget/ChatWidget";
 import { Message } from "../types/chat";
 import { API_BASE_URL } from '../constants/constants';
 
-
-
-let roomId:string="room"
-
 type LocationState = {
     poll?: PollPayload;
 };
@@ -43,15 +39,17 @@ export default function PollResult() {
     const [remaining, setRemaining] = useState<number | null>(null);
     const [votes, setVotes] = useState<number[]>([]);
     const socketRef = useRef<Socket | null>(null);
-    let currentPerson='teacher'
+    let currentPerson = 'teacher'
+    const roomId = localStorage.getItem('roomId');
     
 
     useEffect(() => {
     const fetchChats = async () => {
         try {
+            const token = localStorage.getItem('token');
         const res = await axios.post(`${API_BASE_URL}/api/chats`, {
             roomId
-        });
+        },{headers:{authorization:`Bearer ${token}`}});
 
         setMessages(res.data.chats); 
         } catch (err) {
@@ -65,7 +63,8 @@ export default function PollResult() {
     useEffect(() => {
         const fetchStudents = async () => {
             try {
-                const res = await axios.post(`http://localhost:5001/api/students/${roomId}`);
+                let token=localStorage.getItem('token')
+                const res = await axios.get(`${API_BASE_URL}/api/students/room/${roomId}`,{headers:{authorization:`Bearer ${token}`}});
                 console.log('res',res.data.students)
                 setStudents(res.data.students);
             } catch (err) {
@@ -78,24 +77,29 @@ export default function PollResult() {
     useEffect(() => {
         
         if (socketRef.current) return; 
-        const socket = io('http://localhost:5001');
+        const socket = io(`${API_BASE_URL}`);
         socketRef.current = socket;
 
         socket.emit('connectToRoom', roomId);
         socket.emit('teacher:whatsGoingOn', roomId);
-        
+        console.log('here')
         socket.on('poll:noActive', () => {
+
             console.log('no poll active')
-            socket.emit('teacher:join',{pollId});
-            socket.emit('teacher:start',{pollId});
+            socket.emit('teacher:join',{pollId,roomId});
+            socket.emit('teacher:start',{pollId,roomId});
         });
+
 
         socket.on('poll:stateForTeacher', ({ poll: serverPoll, remaining: serverRemaining }) => {
             if (serverPoll) {
                 // console.log("FULL POLL:", serverPoll);
-
-                let optionsArray = [];
-
+                 if (!serverPoll || serverPoll.status === 'completed') {
+                    setPoll(serverPoll);
+                    setRemaining(0);
+                    return;
+                }
+                let optionsArray = serverPoll.options || [];  
                 if (Array.isArray(serverPoll.option)) {
                     optionsArray = serverPoll.option;
                 } else if (Array.isArray(serverPoll.options)) {
@@ -138,7 +142,6 @@ export default function PollResult() {
         });
 
         socket.on('poll:voted', ({choosen}) => {
-            console.log("increasing index ",choosen)
             setVotes((prev) => {
                 const next = [...prev];
                 if (typeof next[choosen] !== 'number') next[choosen] = 0;
@@ -310,7 +313,7 @@ export default function PollResult() {
                                         <div className="flex justify-between items-center mb-2">
                                             <span className="text-xs md:text-sm font-medium text-gray-900">{item.option}</span>
                                             <span className="text-xs md:text-sm font-semibold text-gray-800">{item.votes} votes</span>
-                                        </div>
+                                         </div>
                                         <div className="w-full h-3 md:h-3.5 rounded-full bg-gray-100 overflow-hidden">
                                             <div
                                                 className={`h-full ${isActive ? 'bg-purple-500' : 'bg-purple-200'}`}

@@ -40,11 +40,13 @@ export default function StudentPollScreen() {
   const studentName=localStorage.getItem('studentName')
 
     useEffect(() => {
+       const token = localStorage.getItem('token');
       const fetchChats = async () => {
           try {
           const res = await axios.post(`${API_BASE_URL}/api/chats`, {
               roomId
-          });
+          }, { headers: { authorization: `Bearer ${token}` } });
+              
 
           setMessages(res.data.chats); 
           } catch (err) {
@@ -62,7 +64,7 @@ export default function StudentPollScreen() {
       socketRef.current = socket;
       socket.emit('connectToRoom', roomId);
       socket.emit('student:whatsgoingon', {studentName,roomId});
-      socket.on('poll:state', ({role, poll, remaining ,attempted,choosen}: any) => {
+      socket.on('poll:state', ({role, poll, remaining ,attempted,choosenOption}: any) => {
         if (!poll) return;
 
         if (!attempted) {
@@ -74,7 +76,7 @@ export default function StudentPollScreen() {
           else {
             setSubmitted(true);
             setShowResults(true);
-            setSelectedAnswer(choosen); 
+            setSelectedAnswer(choosenOption); 
           }
         setPollId(poll._id);
         setQuestion(poll.question || '');
@@ -115,7 +117,6 @@ export default function StudentPollScreen() {
       });
         
       socket.on('poll:voted', ({choosen}) => {
-                console.log("increasing ",choosen)
           setOptions((prevOptions) => {
             if (!prevOptions || choosen == null) return prevOptions;
 
@@ -129,11 +130,8 @@ export default function StudentPollScreen() {
               return opt;
       });
 
-      socket.on('chat:updateChat', ({roomId,sender,text,createdAt}) => {
-                  setMessages((prev) => [...prev, { sender, message: text, createdAt: createdAt }]);
-          });
+      
 
-      // 2. Recalculate percentages
       const totalVotes = updatedOptions.reduce(
         (sum, opt) => sum + (opt.voteCount ?? 0),
         0
@@ -151,13 +149,13 @@ export default function StudentPollScreen() {
         };
       });
 
-      // 3. Update UI
       setLiveResults(updatedResults);
 
       return updatedOptions;
     });
       });
     
+
      socket.on('chat:updateChat', ({roomId,sender,text,createdAt}) => {
         setMessages((prev) => [...prev, { sender, message: text, createdAt: createdAt }]);
       });
@@ -170,7 +168,7 @@ export default function StudentPollScreen() {
       
      
     
-      socket.on('poll:ended', (pollId, poll) => {
+      socket.on('poll:ended', ({pollId, poll}) => {
         navigate('/waiting')
       });
 

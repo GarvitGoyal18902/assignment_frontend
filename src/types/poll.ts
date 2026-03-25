@@ -7,5 +7,6 @@ export type PollPayload = {
   question: string
   timeLimit: number
   options: PollOption[]
+  roomId:string | null
 }
 

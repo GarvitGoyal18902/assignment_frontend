@@ -51,6 +51,7 @@ export default function QuestionManager() {
     const hasMinNonEmptyOptions = options.filter((opt) => isOptionValid(opt)).length >= 2;
     const hasAtLeastOneCorrect = options.some((_, index) => yesNoStates[index] === 'yes');
     const canAskQuestion = question.trim().length > 0 && hasMinNonEmptyOptions && hasAtLeastOneCorrect && !submitting;
+    const roomId = localStorage.getItem('roomId')
 
     const handleAskQuestion = async () => {
         if (!canAskQuestion) return;
@@ -63,12 +64,14 @@ export default function QuestionManager() {
                     text: opt.trim(),
                     isCorrect: yesNoStates[index] === 'yes'
                 }))
-                .filter((opt) => opt.text.length > 0)
+                .filter((opt) => opt.text.length > 0),
+            roomId
         };
 
         try {
+            const token = localStorage.getItem('token');
             setSubmitting(true);
-            const response = await axios.post(`${API_BASE_URL}/api/polls`, payload);
+            const response = await axios.post(`${API_BASE_URL}/api/polls`, payload, { headers: { authorization: `Bearer ${token}` } });
             const { pollId } = response.data;
             navigate(`/poll/${pollId}`, { state: { poll: payload } });
         } catch (error) {

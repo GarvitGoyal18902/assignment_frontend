@@ -6,7 +6,6 @@ import RoleSelector from './RoleSelector/RoleSelector';
 type Role = 'student' | 'teacher';
 
 export default function Login() {
-    localStorage.setItem('roomId','room');
     let navigate = useNavigate();
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
@@ -15,10 +14,9 @@ export default function Login() {
     };
 
     const handleContinue = ()=> {
-        // routing based on selectedRole
         switch (selectedRole) {
             case 'teacher':
-                navigate('/question-manager');
+                navigate('/teacher');
                 return;
             case 'student':
                 navigate('/student');
