@@ -24,13 +24,15 @@ interface ApiResponse {
 
 export default function AllPolls() {
   const [allPolls, setAllPolls] = useState<Poll[]>([]);
-  const roomId = 'room';
+  const roomId = localStorage.getItem('roomId');
+  console.log("romId",roomId)
 
   useEffect(() => {
     async function fetchPolls() {
       try {
-        const response = await axios.get<ApiResponse>(
-          `${API_BASE_URL}/api/polls/all/${roomId}`
+        const token=localStorage.getItem('token')
+        const response = await axios.get(
+          `${API_BASE_URL}/api/polls/all/${roomId}`,{headers:{authorization:`Bearer ${token}`}}
         );
 
         setAllPolls(response.data.polls || []);

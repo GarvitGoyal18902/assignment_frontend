@@ -213,7 +213,7 @@ export default function PollResult() {
 
     function handleViewAllPolls(): void {
        console.log("all polls................")
-        navigate('/poll/all')
+        navigate(`/poll/all/${roomId}`)
     }
 
     const handleSendMessage = (text: string) => {
