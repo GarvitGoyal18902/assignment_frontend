@@ -14,6 +14,7 @@ export default function QuestionManager() {
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [yesNoStates, setYesNoStates] = useState<Record<number, YesNo>>({ 0: null, 1: null });
     const [submitting, setSubmitting] = useState(false);
+    const [generatingOptions, setGeneratingOptions] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
 
     const addOption = () => {
@@ -52,81 +53,86 @@ export default function QuestionManager() {
     const hasMinNonEmptyOptions = options.filter((opt) => isOptionValid(opt)).length >= 2;
     const hasAtLeastOneCorrect = options.some((_, index) => yesNoStates[index] === 'yes');
     const canAskQuestion = question.trim().length > 0 && hasMinNonEmptyOptions && hasAtLeastOneCorrect && !submitting;
-    const roomId = localStorage.getItem('roomId')
+    const roomId = localStorage.getItem('roomId');
 
-    // const handleAskQuestion = async () => {
-    //     if (!canAskQuestion) return;
+    const handleGenerateOptions = async () => {
+        if (!question.trim()) return;
 
-    //     const payload: PollPayload = {
-    //         question: question.trim(),
-    //         timeLimit: +timeLimit,
-    //         options: options
-    //             .map((opt, index) => ({
-    //                 text: opt.trim(),
-    //                 isCorrect: yesNoStates[index] === 'yes'
-    //             }))
-    //             .filter((opt) => opt.text.length > 0),
-    //         roomId
-    //     };
+        try {
+            setGeneratingOptions(true);
 
-    //     try {
-    //         const token = localStorage.getItem('token');
-    //         setSubmitting(true);
-    //         const response = await axios.post(`${API_BASE_URL}/api/polls`, payload, { headers: { authorization: `Bearer ${token}` } });
-    //         const { pollId } = response.data;
-    //         navigate(`/poll/${pollId}`, { state: { poll: payload } });
-    //     } catch (error) {
-    //         console.error('Failed to create poll', error);
-    //     } finally {
-    //         setSubmitting(false);
-    //     }
-    // };
+            const token = localStorage.getItem('token');
+            const response = await axios.post(
+                `${API_BASE_URL}/api/ai/generate-options`,
+                { question: question.trim() },
+                {
+                    headers: {
+                        authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            const generatedOptions: string[] = response.data.options || [];
+            const normalized = generatedOptions.map((opt) => opt.trim()).filter(Boolean);
+
+            if (normalized.length < 2) {
+                throw new Error('Not enough options generated');
+            }
+
+            setOptions(normalized);
+            const nextStates: Record<number, YesNo> = {};
+            normalized.forEach((_, index) => {
+                nextStates[index] = null;
+            });
+            setYesNoStates(nextStates);
+            setSelectedOption(null);
+        } catch (error) {
+            console.error('Failed to generate options', error);
+        } finally {
+            setGeneratingOptions(false);
+        }
+    };
 
     const handleAskQuestion = async () => {
-    if (!canAskQuestion) return;
+        if (!canAskQuestion) return;
 
-    try {
-        const token = localStorage.getItem('token');
-        setSubmitting(true);
+        try {
+            const token = localStorage.getItem('token');
+            setSubmitting(true);
 
-        const formData = new FormData();
+            const formData = new FormData();
 
-        formData.append('question', question.trim());
-        formData.append('timeLimit', timeLimit);
-        formData.append('roomId', roomId || '');
+            formData.append('question', question.trim());
+            formData.append('timeLimit', timeLimit);
+            formData.append('roomId', roomId || '');
 
-        const formattedOptions = options
-            .map((opt, index) => ({
-                text: opt.trim(),
-                isCorrect: yesNoStates[index] === 'yes'
-            }))
-            .filter((opt) => opt.text.length > 0);
+            const formattedOptions = options
+                .map((opt, index) => ({
+                    text: opt.trim(),
+                    isCorrect: yesNoStates[index] === 'yes'
+                }))
+                .filter((opt) => opt.text.length > 0);
 
-        formData.append('options', JSON.stringify(formattedOptions));
+            formData.append('options', JSON.stringify(formattedOptions));
 
-        files.forEach((file) => {
-            formData.append('images', file);
-        });
+            files.forEach((file) => {
+                formData.append('images', file);
+            });
 
-        const response = await axios.post(
-            `${API_BASE_URL}/api/polls`,
-            formData,
-            {
+            const response = await axios.post(`${API_BASE_URL}/api/polls`, formData, {
                 headers: {
-                    authorization: `Bearer ${token}`,
+                    authorization: `Bearer ${token}`
                 }
-            }
-        );
+            });
 
-        const { pollId } = response.data;
-        navigate(`/poll/${pollId}`);
-
-    } catch (error) {
-        console.error('Failed to create poll', error);
-    } finally {
-        setSubmitting(false);
-    }
-};
+            const { pollId } = response.data;
+            navigate(`/poll/${pollId}`);
+        } catch (error) {
+            console.error('Failed to create poll', error);
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
@@ -136,14 +142,12 @@ export default function QuestionManager() {
     return (
         <div className="min-h-screen bg-white px-8 py-10 md:px-20 md:py-14 font-sans flex justify-center">
             <div className="w-full max-w-5xl">
-                {/* Badge */}
                 <div className="mb-8">
                     <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-xs font-semibold tracking-wide text-purple-600 shadow-sm">
                         ✦ Intervue Poll
                     </span>
                 </div>
 
-                {/* Heading */}
                 <div className="mb-10">
                     <h1 className="text-3xl md:text-4xl text-gray-900 mb-3">
                         Let&apos;s <span className="font-extrabold">Get Started</span>
@@ -154,7 +158,6 @@ export default function QuestionManager() {
                     </p>
                 </div>
 
-                {/* Question input + timer */}
                 <div className="mb-10">
                     <div className="flex items-center justify-between mb-3">
                         <label className="text-sm font-semibold text-gray-800">Enter your question</label>
@@ -177,46 +180,59 @@ export default function QuestionManager() {
                         />
                         <span className="absolute bottom-4 right-6 text-xs text-gray-400">0/100</span>
                     </div>
-                    <div className="mb-10">
-    <label className="block text-sm font-semibold text-gray-800 mb-3">
-        Attach Images (optional)
-    </label>
 
-    <div className="flex items-center justify-center w-full">
-        <label className="w-full flex flex-col items-center justify-center px-6 py-6 border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:border-purple-400 hover:bg-purple-50 transition">
-            <div className="flex flex-col items-center justify-center">
-                <p className="text-sm text-gray-600 font-medium">
-                    Click to upload images
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                    PNG, JPG (multiple allowed)
-                </p>
-            </div>
-            <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-            />
-        </label>
-    </div>
+                    <div className="mt-4 flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={handleGenerateOptions}
+                            disabled={!question.trim() || generatingOptions}
+                            className={`px-6 py-3 rounded-full text-sm font-semibold shadow-md transition-transform ${
+                                !question.trim() || generatingOptions
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-purple-600 text-white hover:bg-purple-700 hover:-translate-y-0.5'
+                            }`}>
+                            {generatingOptions ? 'Generating...' : 'Generate Options'}
+                        </button>
+                    </div>
 
-    {files.length > 0 && (
-        <div className="mt-4 text-xs text-gray-500">
-            {files.length} file(s) selected
-        </div>
-    )}
-</div>
+                    <div className="mb-10 mt-6">
+                        <label className="block text-sm font-semibold text-gray-800 mb-3">
+                            Attach Images (optional)
+                        </label>
+
+                        <div className="flex items-center justify-center w-full">
+                            <label className="w-full flex flex-col items-center justify-center px-6 py-6 border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:border-purple-400 hover:bg-purple-50 transition">
+                                <div className="flex flex-col items-center justify-center">
+                                    <p className="text-sm text-gray-600 font-medium">
+                                        Click to upload images
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        PNG, JPG (multiple allowed)
+                                    </p>
+                                </div>
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                />
+                            </label>
+                        </div>
+
+                        {files.length > 0 && (
+                            <div className="mt-4 text-xs text-gray-500">
+                                {files.length} file(s) selected
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                {/* Options header */}
                 <div className="flex items-center justify-between mb-4">
                     <div className="text-sm font-semibold text-gray-800">Edit Options</div>
                     <div className="text-sm font-semibold text-gray-800 mr-4">Is it Correct?</div>
                 </div>
 
-                {/* Options list */}
                 <div className="space-y-4 mb-8">
                     {options.map((option, index) => {
                         const len = option.trim().length;
@@ -224,12 +240,10 @@ export default function QuestionManager() {
 
                         return (
                             <div key={index} className="flex items-center gap-4">
-                                {/* Index circle */}
                                 <div className="w-7 h-7 flex items-center justify-center rounded-full bg-purple-50 text-xs font-semibold text-purple-600 border border-purple-200">
                                     {index + 1}
                                 </div>
 
-                                {/* Option input */}
                                 <div className="flex-1">
                                     <input
                                         type="text"
@@ -251,7 +265,6 @@ export default function QuestionManager() {
                                     )}
                                 </div>
 
-                                {/* Yes/No radio group */}
                                 <div className="flex items-center gap-6 pr-2">
                                     <button
                                         type="button"
@@ -296,7 +309,6 @@ export default function QuestionManager() {
                     })}
                 </div>
 
-                {/* Add more / Ask question row */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                     <button
                         type="button"
