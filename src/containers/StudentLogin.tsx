@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { io, type Socket } from 'socket.io-client';
 import { API_BASE_URL } from '../constants/constants';
 import { useEffect, useRef, useState } from 'react';
 
@@ -15,17 +14,7 @@ export default function StudentLogin() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const socketRef = useRef<Socket | null>(null);
 
-    useEffect(() => {
-        const socket = io(`${API_BASE_URL}`);
-        socketRef.current = socket;
-
-        return () => {
-            socket.disconnect();
-            socketRef.current = null;
-        };
-    }, []);
 
     const handleLogin = async () => {
         if (!studentName || !email || !roomId || !password) return;
@@ -44,7 +33,6 @@ export default function StudentLogin() {
             localStorage.setItem('roomId', roomId);
             localStorage.setItem('token', res.data.token);
 
-            socketRef.current?.emit('connectToRoom', roomId);
             navigate('/waiting');
 
         } catch (err: any) {
@@ -86,7 +74,6 @@ export default function StudentLogin() {
             localStorage.setItem('roomId', roomId);
             localStorage.setItem('token', res.data.token);
 
-            socketRef.current?.emit('connectToRoom', roomId);
             navigate('/waiting');
 
         } catch (err: any) {

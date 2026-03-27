@@ -14,6 +14,7 @@ export default function QuestionManager() {
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [yesNoStates, setYesNoStates] = useState<Record<number, YesNo>>({ 0: null, 1: null });
     const [submitting, setSubmitting] = useState(false);
+    const [files, setFiles] = useState<File[]>([]);
 
     const addOption = () => {
         const newIndex = options.length;
@@ -53,32 +54,83 @@ export default function QuestionManager() {
     const canAskQuestion = question.trim().length > 0 && hasMinNonEmptyOptions && hasAtLeastOneCorrect && !submitting;
     const roomId = localStorage.getItem('roomId')
 
+    // const handleAskQuestion = async () => {
+    //     if (!canAskQuestion) return;
+
+    //     const payload: PollPayload = {
+    //         question: question.trim(),
+    //         timeLimit: +timeLimit,
+    //         options: options
+    //             .map((opt, index) => ({
+    //                 text: opt.trim(),
+    //                 isCorrect: yesNoStates[index] === 'yes'
+    //             }))
+    //             .filter((opt) => opt.text.length > 0),
+    //         roomId
+    //     };
+
+    //     try {
+    //         const token = localStorage.getItem('token');
+    //         setSubmitting(true);
+    //         const response = await axios.post(`${API_BASE_URL}/api/polls`, payload, { headers: { authorization: `Bearer ${token}` } });
+    //         const { pollId } = response.data;
+    //         navigate(`/poll/${pollId}`, { state: { poll: payload } });
+    //     } catch (error) {
+    //         console.error('Failed to create poll', error);
+    //     } finally {
+    //         setSubmitting(false);
+    //     }
+    // };
+
     const handleAskQuestion = async () => {
-        if (!canAskQuestion) return;
+    if (!canAskQuestion) return;
 
-        const payload: PollPayload = {
-            question: question.trim(),
-            timeLimit: +timeLimit,
-            options: options
-                .map((opt, index) => ({
-                    text: opt.trim(),
-                    isCorrect: yesNoStates[index] === 'yes'
-                }))
-                .filter((opt) => opt.text.length > 0),
-            roomId
-        };
+    try {
+        const token = localStorage.getItem('token');
+        setSubmitting(true);
 
-        try {
-            const token = localStorage.getItem('token');
-            setSubmitting(true);
-            const response = await axios.post(`${API_BASE_URL}/api/polls`, payload, { headers: { authorization: `Bearer ${token}` } });
-            const { pollId } = response.data;
-            navigate(`/poll/${pollId}`, { state: { poll: payload } });
-        } catch (error) {
-            console.error('Failed to create poll', error);
-        } finally {
-            setSubmitting(false);
-        }
+        const formData = new FormData();
+
+        formData.append('question', question.trim());
+        formData.append('timeLimit', timeLimit);
+        formData.append('roomId', roomId || '');
+
+        const formattedOptions = options
+            .map((opt, index) => ({
+                text: opt.trim(),
+                isCorrect: yesNoStates[index] === 'yes'
+            }))
+            .filter((opt) => opt.text.length > 0);
+
+        formData.append('options', JSON.stringify(formattedOptions));
+
+        files.forEach((file) => {
+            formData.append('images', file);
+        });
+
+        const response = await axios.post(
+            `${API_BASE_URL}/api/polls`,
+            formData,
+            {
+                headers: {
+                    authorization: `Bearer ${token}`,
+                }
+            }
+        );
+
+        const { pollId } = response.data;
+        navigate(`/poll/${pollId}`);
+
+    } catch (error) {
+        console.error('Failed to create poll', error);
+    } finally {
+        setSubmitting(false);
+    }
+};
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files) return;
+        setFiles(Array.from(e.target.files));
     };
 
     return (
@@ -125,6 +177,37 @@ export default function QuestionManager() {
                         />
                         <span className="absolute bottom-4 right-6 text-xs text-gray-400">0/100</span>
                     </div>
+                    <div className="mb-10">
+    <label className="block text-sm font-semibold text-gray-800 mb-3">
+        Attach Images (optional)
+    </label>
+
+    <div className="flex items-center justify-center w-full">
+        <label className="w-full flex flex-col items-center justify-center px-6 py-6 border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:border-purple-400 hover:bg-purple-50 transition">
+            <div className="flex flex-col items-center justify-center">
+                <p className="text-sm text-gray-600 font-medium">
+                    Click to upload images
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                    PNG, JPG (multiple allowed)
+                </p>
+            </div>
+            <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+            />
+        </label>
+    </div>
+
+    {files.length > 0 && (
+        <div className="mt-4 text-xs text-gray-500">
+            {files.length} file(s) selected
+        </div>
+    )}
+</div>
                 </div>
 
                 {/* Options header */}
