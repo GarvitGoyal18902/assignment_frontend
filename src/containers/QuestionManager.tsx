@@ -144,7 +144,7 @@ export default function QuestionManager() {
             <div className="w-full max-w-5xl">
                 <div className="mb-8">
                     <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-xs font-semibold tracking-wide text-purple-600 shadow-sm">
-                        ✦ Intervue Poll
+                        ✦ snap Poll
                     </span>
                 </div>
 
